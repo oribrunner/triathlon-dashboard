@@ -1104,7 +1104,7 @@ function closeCoach(){$('coach').classList.remove('open');$('coach-overlay').cla
 function coachKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();coachAsk()}}
 function scrollCoach(){const b=$('coach-body');b.scrollTop=b.scrollHeight}
 function fmtMsg(t){
-  const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
   const tbl=rows=>{
     const data=rows.filter(r=>!/^\|[\s\-:|]+\|$/.test(r.trim()));
     if(!data.length)return'';

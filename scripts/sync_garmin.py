@@ -16,25 +16,15 @@ except ImportError:
     sys.exit("Run: pip install requests")
 
 
-def get_env(name):
-    value = os.environ.get(name)
-    if not value:
-        raise RuntimeError(
-            f"Missing required environment variable: {name}.\n"
-            f"Set it before running, for example:\n"
-            f"  set {name}=<value>  # Windows PowerShell\n"
-            f"  $env:{name}='<value>'  # PowerShell\n"
-            f"  export {name}=<value>  # macOS/Linux\n"
-        )
-    return value
-
-
 # ── Strava ────────────────────────────────────────────────────────────────────
 
 def fetch_strava_activities(days=90):
-    client_id = get_env("STRAVA_CLIENT_ID")
-    client_secret = get_env("STRAVA_CLIENT_SECRET")
-    refresh_token = get_env("STRAVA_REFRESH_TOKEN")
+    client_id = os.environ.get("STRAVA_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("STRAVA_CLIENT_SECRET", "").strip()
+    refresh_token = os.environ.get("STRAVA_REFRESH_TOKEN", "").strip()
+    if not (client_id and client_secret and refresh_token):
+        print("No Strava credentials set — skipping Strava activities")
+        return []
 
     print("Refreshing Strava access token...")
     r = requests.post("https://www.strava.com/oauth/token", data={
