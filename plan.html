@@ -83,7 +83,7 @@ h1{font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:600;letter-
   <div class="top">
     <div>
       <h1>Season Plan</h1>
-      <div class="sub" id="sub">Ori · Road to Race Day</div>
+      <div class="sub" id="sub">Road to Race Day</div>
     </div>
     <a class="back" href="index.html">&larr; Dashboard</a>
   </div>
@@ -106,25 +106,26 @@ h1{font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:600;letter-
 
 <script>
 'use strict';
-const RACE1='2026-09-06', RACE2='2026-10-17';
-const BLOCKS=[
-  {name:'Base',          start:'2026-04-01',end:'2026-06-02',longRideKm:60,longRunKm:12,swims:1,sc:false,zwift:false,brick:false,color:'#787e88',
-    focus:'Aerobic base — consistency across all three disciplines. Easy effort, build the habit and the engine before structure arrives.'},
-  {name:'Foundation',    start:'2026-06-03',end:'2026-06-28',longRideKm:70,longRunKm:15,swims:1,sc:true, zwift:true, brick:false,color:'#7c9cf0',
-    focus:'First structured block — introduce strength work and indoor intensity. Establish the weekly routine before the load ramps up.'},
-  {name:'Build',         start:'2026-06-29',end:'2026-07-26',longRideKm:90,longRunKm:15,swims:1,sc:false,zwift:true, brick:true, color:'#6aa8f0',
-    focus:'Load ramps hard. Longer rides and runs, brick sessions begin. This is where the biggest fitness gains of the season are made.'},
-  {name:'Race-specific', start:'2026-07-27',end:'2026-08-22',longRideKm:90,longRunKm:14,swims:1,sc:false,zwift:true, brick:true, color:'#e0b050',
-    focus:'Sharpen for race demands — race-pace efforts, brick work and a sustained long ride. Fitness converts into race readiness.'},
-  {name:'Taper – Race 1',start:'2026-08-23',end:'2026-09-05',longRideKm:0, longRunKm:0, swims:0,sc:false,zwift:false,brick:false,color:'#b49ce0',
-    focus:'Cut volume ~40%, keep 2–3 short sharp efforts. Fitness is banked — the job now is to arrive fresh and sharp for Race 1.'},
-  {name:'Recovery',      start:'2026-09-07',end:'2026-09-13',longRideKm:0, longRunKm:0, swims:0,sc:false,zwift:false,brick:false,color:'#4ec98a',
-    focus:'Full recovery after Race 1. Easy movement only — walk, gentle swim, sleep and reset before the second build.'},
-  {name:'Maintenance',   start:'2026-09-14',end:'2026-10-04',longRideKm:50,longRunKm:12,swims:1,sc:false,zwift:true, brick:false,color:'#8aa0b8',
-    focus:'Hold fitness between races — moderate volume keeps the systems primed without digging a deep fatigue hole.'},
-  {name:'Taper – Race 2',start:'2026-10-05',end:'2026-10-16',longRideKm:0, longRunKm:0, swims:0,sc:false,zwift:false,brick:false,color:'#b49ce0',
-    focus:'Final taper. Trust the work, protect the legs and race sharp at Race 2.'},
+let RACES=[], BLOCKS=[];
+
+// Presentation-only metadata (color, description) keyed by a substring of the
+// block name, since athlete-specific config.json only carries the
+// scheduling/target fields. Falls back to a generic description for any
+// block name that doesn't match one of the standard phases.
+const BLOCK_META=[
+  [/base/i,          {color:'#787e88',focus:'Aerobic base — consistency across disciplines. Easy effort, build the habit and the engine before structure arrives.'}],
+  [/foundation/i,    {color:'#7c9cf0',focus:'First structured block — introduce strength work and indoor intensity. Establish the weekly routine before the load ramps up.'}],
+  [/race.?spec/i,    {color:'#e0b050',focus:'Sharpen for race demands — race-pace efforts, brick work and a sustained long ride. Fitness converts into race readiness.'}],
+  [/build/i,         {color:'#6aa8f0',focus:'Load ramps up. Longer key sessions and, where relevant, brick sessions. This is where most of the season’s fitness gains happen.'}],
+  [/taper/i,         {color:'#b49ce0',focus:'Cut volume, keep a couple of short sharp efforts. Fitness is banked — the job now is to arrive fresh and sharp.'}],
+  [/recovery/i,      {color:'#4ec98a',focus:'Full recovery after the race. Easy movement only — walk, gentle swim, sleep and reset before the next build.'}],
+  [/maintenance/i,   {color:'#8aa0b8',focus:'Hold fitness between races — moderate volume keeps the systems primed without digging a deep fatigue hole.'}],
 ];
+function metaFor(name){
+  const hit=BLOCK_META.find(([re])=>re.test(name||''));
+  return (hit&&hit[1])||{color:'#6aa8f0',focus:'Structured training block — follow the weekly targets below.'};
+}
+
 const today=()=>new Date().toISOString().slice(0,10);
 const fmtDate=ds=>{const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
 const fmtDateY=ds=>{const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})};
@@ -134,41 +135,48 @@ const statusOf=b=>{const td=today();return td>b.end?'done':(td>=b.start&&td<=b.e
 // ── Races ──
 function renderRaces(){
   const td=new Date(today());
-  const races=[{name:'Race 1',date:RACE1},{name:'Race 2',date:RACE2}];
-  document.getElementById('races').innerHTML=races.map(r=>{
-    const wks=Math.ceil((new Date(r.date)-td)/(7*86400000));
-    const done=wks<0;
-    return `<div class="race-card">
-      <div class="rc-l"><div class="rc-name">${r.name}</div><div class="rc-date">${fmtDateY(r.date)}</div></div>
-      <div class="rc-count ${done?'done':''}"><div class="n">${done?'✓':wks}</div><div class="u">${done?'complete':wks===1?'week away':'weeks away'}</div></div>
-    </div>`;
-  }).join('');
+  if(!RACES.length){
+    document.getElementById('races').innerHTML=`<div class="race-card"><div class="rc-l"><div class="rc-name">No races added yet</div><div class="rc-date">Add one from the setup wizard</div></div></div>`;
+  } else {
+    document.getElementById('races').innerHTML=RACES.map(r=>{
+      const wks=Math.ceil((new Date(r.date)-td)/(7*86400000));
+      const done=wks<0;
+      return `<div class="race-card">
+        <div class="rc-l"><div class="rc-name">${r.name}</div><div class="rc-date">${fmtDateY(r.date)}</div></div>
+        <div class="rc-count ${done?'done':''}"><div class="n">${done?'✓':wks}</div><div class="u">${done?'complete':wks===1?'week away':'weeks away'}</div></div>
+      </div>`;
+    }).join('');
+  }
   const cur=BLOCKS.find(b=>statusOf(b)==='cur');
-  document.getElementById('sub').textContent=`Ori · Currently in ${cur?cur.name:'—'} · ${Math.ceil((new Date(RACE1)-td)/(7*86400000))} weeks to Race 1`;
+  const next=RACES[0];
+  const raceNote=next?`${Math.ceil((new Date(next.date)-td)/(7*86400000))} weeks to ${next.name}`:'no races added yet';
+  document.getElementById('sub').textContent=`Currently in ${cur?cur.name:'—'} · ${raceNote}`;
 }
 
 // ── Timeline ──
 function renderTimeline(){
-  const tl=BLOCKS.filter(b=>b.name!=='Base');
-  const start=new Date(tl[0].start), end=new Date(RACE2);
-  const span=end-start;
+  const tl=BLOCKS.length>1?BLOCKS.filter(b=>!/base/i.test(b.name)):BLOCKS;
+  if(!tl.length)return;
+  const start=new Date(tl[0].start);
+  const end=RACES.length?new Date(RACES[RACES.length-1].date):new Date(BLOCKS[BLOCKS.length-1].end);
+  const span=end-start||1;
   const track=document.getElementById('tl-track');
   track.innerHTML=tl.map(b=>{
-    const w=(new Date(b.end)-new Date(b.start))/span*100;
+    const w=Math.max(0,(new Date(b.end)-new Date(b.start))/span*100);
     const st=statusOf(b);
     const op=st==='done'?0.4:st==='up'?0.72:1;
-    const short=b.name.replace('Race ','R').replace('Taper – R1','Taper 1').replace('Taper – R2','Taper 2').replace('Race-specific','Race-spec');
-    return `<div class="tl-seg" style="width:${w}%;background:${b.color};opacity:${op}" title="${b.name}">${w>7?short:''}</div>`;
+    const short=b.name.length>12?b.name.slice(0,11)+'…':b.name;
+    return `<div class="tl-seg" style="width:${w}%;background:${metaFor(b.name).color};opacity:${op}" title="${b.name}">${w>7?short:''}</div>`;
   }).join('');
   // now marker
   const nowPct=Math.max(0,Math.min(100,(new Date(today())-start)/span*100));
   const now=document.createElement('div');now.className='tl-now';now.style.left=nowPct+'%';track.appendChild(now);
   // race markers
-  [['Race 1',RACE1],['Race 2',RACE2]].forEach(([nm,dt])=>{
-    const p=(new Date(dt)-start)/span*100;
-    const m=document.createElement('div');m.className='tl-race';m.style.left=p+'%';m.setAttribute('data-r',nm);track.appendChild(m);
+  RACES.forEach(r=>{
+    const p=Math.max(0,Math.min(100,(new Date(r.date)-start)/span*100));
+    const m=document.createElement('div');m.className='tl-race';m.style.left=p+'%';m.setAttribute('data-r',r.name);track.appendChild(m);
   });
-  document.getElementById('tl-axis').innerHTML=`<span>${fmtDate(tl[0].start)}</span><span>${fmtDate(RACE2)}</span>`;
+  document.getElementById('tl-axis').innerHTML=`<span>${fmtDate(tl[0].start)}</span><span>${fmtDate(end.toISOString().slice(0,10))}</span>`;
 }
 
 // ── Blocks ──
@@ -176,7 +184,7 @@ function tgt(v,unit){return v>0?`${v}${unit}`:'—'}
 function renderBlocks(){
   const seq=[];
   BLOCKS.forEach(b=>seq.push({d:b.start,kind:'block',b}));
-  [['Race 1',RACE1],['Race 2',RACE2]].forEach(([nm,dt])=>seq.push({d:dt,kind:'race',nm,dt}));
+  RACES.forEach(r=>seq.push({d:r.date,kind:'race',nm:r.name,dt:r.date}));
   seq.sort((a,b)=>a.d.localeCompare(b.d));
   const td=new Date(today());
   document.getElementById('blocks').innerHTML=seq.map(it=>{
@@ -184,22 +192,22 @@ function renderBlocks(){
       const wks=Math.ceil((new Date(it.dt)-td)/(7*86400000));
       return `<div class="blk-race"><div><div class="br-name">${it.nm}</div><div class="br-date">${fmtDateY(it.dt)}</div></div><div class="br-tag">${wks<0?'Complete':wks===0?'This week':wks+' weeks away'}</div></div>`;
     }
-    const b=it.b, st=statusOf(b), wks=weeksBetween(b.start,b.end);
+    const b=it.b, meta=metaFor(b.name), st=statusOf(b), wks=weeksBetween(b.start,b.end);
     const stTxt={done:'Complete',cur:'Current',up:'Upcoming'}[st];
     const chips=[];
     if(b.sc)chips.push('Strength');
     if(b.zwift)chips.push('Indoor / Zwift');
     if(b.brick)chips.push('Brick sessions');
     const reduced=b.longRideKm===0;
-    return `<div class="blk ${st==='cur'?'cur':''}" style="border-left-color:${st==='cur'?'var(--blue)':b.color}">
+    return `<div class="blk ${st==='cur'?'cur':''}" style="border-left-color:${st==='cur'?'var(--blue)':meta.color}">
       <div class="blk-top">
         <div class="blk-l"><div class="blk-name">${b.name}</div><div class="blk-dates">${fmtDate(b.start)} – ${fmtDate(b.end)} · ${wks} week${wks!==1?'s':''}</div></div>
         <div class="blk-r"><span class="st st-${st}">${stTxt}</span></div>
       </div>
-      <div class="blk-desc">${b.focus}</div>
+      <div class="blk-desc">${meta.focus}</div>
       <div class="blk-targets">
         ${reduced
-          ? `<div class="tg"><span class="tg-lbl">Volume</span><span class="tg-val" style="color:${b.color}">Reduced</span></div><div class="tg"><span class="tg-lbl">Focus</span><span class="tg-val" style="color:${b.color}">${b.name.startsWith('Taper')?'Stay sharp':'Recover'}</span></div>`
+          ? `<div class="tg"><span class="tg-lbl">Volume</span><span class="tg-val" style="color:${meta.color}">Reduced</span></div><div class="tg"><span class="tg-lbl">Focus</span><span class="tg-val" style="color:${meta.color}">${/taper/i.test(b.name)?'Stay sharp':'Recover'}</span></div>`
           : `<div class="tg"><span class="tg-lbl">Long ride</span><span class="tg-val c-bike" style="color:var(--bike)">${tgt(b.longRideKm,' km')}</span></div>
              <div class="tg"><span class="tg-lbl">Long run</span><span class="tg-val" style="color:var(--run)">${tgt(b.longRunKm,' km')}</span></div>
              <div class="tg"><span class="tg-lbl">Swims/wk</span><span class="tg-val" style="color:var(--swim)">${tgt(b.swims,'×')}</span></div>`}
@@ -209,7 +217,16 @@ function renderBlocks(){
   }).join('');
 }
 
-renderRaces();renderTimeline();renderBlocks();
+async function init(){
+  let cfg={};
+  try{const r=await fetch('./config.json?t='+Date.now());if(r.ok)cfg=await r.json()}catch(_){}
+  RACES=(cfg.races||[]).filter(r=>r.name&&r.date);
+  BLOCKS=(cfg.blocks||[]).filter(b=>b.name&&b.start&&b.end);
+  document.title=`Season Plan — ${(cfg.athlete||{}).name||'Triathlon Dashboard'}`;
+  if(!BLOCKS.length){document.getElementById('blocks').innerHTML='<div class="blk">No training blocks configured yet.</div>';return}
+  renderRaces();renderTimeline();renderBlocks();
+}
+init();
 </script>
 </body>
 </html>
